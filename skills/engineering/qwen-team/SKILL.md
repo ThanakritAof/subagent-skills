@@ -1,0 +1,219 @@
+---
+name: qwen-team
+description: Have a premium model such as Claude, Codex, Gemini, or the current agent decompose a large task into subtasks, assign each subtask to paired Qwen-backed dev and tester subagents, then orchestrate review, integration, and feedback loops until the full task meets acceptance criteria. Use when the user asks for "qwen team", "qwen dev and tester", "split this across qwen", "use qwen as a team", or when a broad task needs cheap parallel implementation/testing with premium-model orchestration. Do not use for small single-worker delegation; use qwen-agent instead.
+---
+
+# Qwen Team
+
+## Overview
+
+Use Qwen as cheap dev/test capacity, not as the final authority. The premium model decomposes the large task into subtasks, gives each subtask a `qwen-dev` and `qwen-tester`, then reviews, integrates, and controls the feedback loop.
+
+## Use Criteria
+
+Use this workflow only when all of these are true:
+
+- The work is substantial enough to split into 2-5 subtasks.
+- Each subtask is substantial enough to justify both an implementation pass and an independent test/review pass.
+- Each dev task and tester task can be described with absolute paths, explicit inputs, outputs, and acceptance criteria.
+- A wrong Qwen result is easy for the premium reviewer or main agent to catch.
+- The feedback loop is worth the extra orchestration cost.
+
+Do not use this workflow for:
+
+- One-file mechanical edits that fit `qwen-agent`.
+- Architecture, security-sensitive changes, production operations, or destructive actions.
+- Debugging before a reliable repro exists and the fail path is known.
+- Tasks where workers need hidden conversation context to succeed.
+- Tasks where no meaningful independent tester role exists.
+
+## Roles
+
+### Main Agent
+
+Frame the task, choose whether team mode is justified, decompose the work into subtasks, define success for each subtask and the whole task, launch subagents, inspect outputs, apply or reject edits, run verification, and report honestly. Never claim an external premium reviewer approved the work unless that reviewer actually ran.
+
+### Qwen Dev
+
+Use one `qwen-dev` per active subtask. The dev receives a self-contained prompt with the repository path, subtask goal, allowed files, forbidden files/actions, acceptance criteria, and requested output. The dev may edit files only inside its allowed scope.
+
+### Qwen Tester
+
+Use one `qwen-tester` per active subtask. The tester receives the original request, subtask acceptance criteria, relevant paths, and the dev's changed-file list or diff summary. The tester must cover three case groups: good case, normal case, and bad case. Prefer giving the tester read/test permissions first; allow test edits only when the task explicitly includes adding or fixing tests.
+
+### Premium Reviewer
+
+Use Claude, Codex, Gemini, or the current stronger model as the orchestrator, feedback controller, integrator, and final reviewer. Prefer the reviewer the user requested. If no external premium model CLI/tool is available, have the main agent perform this review and state that no external reviewer was run.
+
+The premium reviewer receives the original request, subtask plan, dev outputs, tester outputs, diffs, verification logs, and unresolved risks. It must return one of: `APPROVE`, `CHANGES_REQUIRED`, or `REJECT`, plus concrete feedback when changes are required.
+
+## Workflow
+
+### 1. Decompose the Task
+
+State the overall goal in one sentence. The premium model then splits the work into 2-5 subtasks. Each subtask must have a clear boundary, owner label, acceptance criteria, and integration notes.
+
+Subtask shape:
+
+```text
+Subtask id: subtask-a
+Goal: ...
+Inputs: ...
+Allowed files or directories: ...
+Forbidden files or actions: ...
+Acceptance criteria: ...
+Dependencies: independent | after subtask-b | before subtask-c
+Integration notes: ...
+```
+
+Prefer parallel subtasks when file ownership does not overlap. If subtasks touch the same files or depend on each other, serialize them.
+
+### 2. Create Dev and Tester Prompts
+
+For both prompts, define:
+
+- Inputs: absolute paths, commands, logs, or artifacts.
+- Subtask id and goal.
+- Output: changed files, test report, risk list, or recommendation.
+- Acceptance criteria: what must be true for the subtask to count.
+- Boundaries: files, directories, commands, or systems the worker must not touch.
+
+### 3. Run Qwen Dev Per Subtask
+
+Launch one dev per active subtask with the `qwen-agent` command pattern:
+
+```bash
+claude-subagent -p "<self-contained qwen-dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
+```
+
+Dev prompt shape:
+
+```text
+You are qwen-dev in a Qwen dev/test pair.
+Repository: /absolute/path
+Original user request: ...
+Overall goal: ...
+Subtask id: ...
+Subtask goal: ...
+Task: implement this subtask only.
+Allowed files or directories: ...
+Forbidden files or actions: ...
+Acceptance criteria: ...
+Return: changed files, diff summary, commands run, results, risks, and follow-up needed.
+Do not rely on prior conversation context.
+```
+
+Inspect each dev's diff before testing. If a dev edited outside scope, touched files owned by another active subtask, or made unsafe changes, reject that pass and either rerun with narrower instructions or take over directly.
+
+### 4. Run Qwen Tester Per Subtask
+
+Launch the tester after the matching dev pass. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
+
+```bash
+claude-subagent -p "<self-contained qwen-tester prompt>" --allowedTools Bash Read Edit Write Glob Grep
+```
+
+Tester prompt shape:
+
+```text
+You are qwen-tester in a Qwen dev/test pair.
+Repository: /absolute/path
+Original user request: ...
+Overall goal: ...
+Subtask id: ...
+Subtask acceptance criteria: ...
+Changed files or diff summary from qwen-dev: ...
+Task: independently test and review whether the implementation satisfies this subtask and does not break the overall task.
+Inputs: ...
+Allowed files or directories: ...
+Forbidden files or actions: ...
+Required test coverage:
+- Good case: the best/ideal or high-value path succeeds.
+- Normal case: the common everyday path succeeds.
+- Bad case: invalid, empty, failing, edge, or misuse input behaves correctly.
+Return: commands run, pass/fail results for all three case groups, defects found, missing coverage, and recommended fixes.
+Do not rely on prior conversation context.
+```
+
+Prefer a tester that runs tests and reports defects without editing implementation files. If one of the three case groups is not applicable, the tester must say why and propose the closest equivalent. If the tester adds tests, inspect those diffs separately.
+
+### 5. Premium Review and Orchestration
+
+Build a reviewer packet after every dev/test pass:
+
+```text
+Original request: ...
+Repository: /absolute/path
+Overall goal: ...
+Overall acceptance criteria: ...
+Subtask plan: ...
+Subtask under review: ...
+Qwen dev output for this subtask: ...
+Qwen tester output for this subtask: ...
+Tester case coverage: good case / normal case / bad case
+Diff summary: ...
+Verification run: ...
+Known risks or unverified areas: ...
+Decision requested: APPROVE, CHANGES_REQUIRED, or REJECT with reasons.
+```
+
+Send the packet to the requested premium reviewer if available. Check availability before invoking a CLI such as `claude`, `codex`, or `gemini`; do not invent a review. If no external reviewer is available, the main agent performs this review directly and labels it as internal review.
+
+Reviewer decision rules:
+
+- `APPROVE`: mark the subtask approved and move to the next subtask or integration review.
+- `CHANGES_REQUIRED`: turn the reviewer feedback into a new self-contained `qwen-dev` prompt for that subtask, then rerun its `qwen-tester` and review again. Missing good/normal/bad case coverage is always changes-required unless the tester gave a concrete non-applicability reason.
+- `REJECT`: stop that subtask's Qwen loop, explain the rejection, and have the premium model redesign the subtask or ask the user for direction.
+
+### 6. Feedback Loop
+
+Loop in this order:
+
+```text
+premium decomposition -> qwen-dev(subtask) -> qwen-tester(subtask) -> premium review -> qwen-dev rework(subtask) -> qwen-tester(subtask) -> premium review
+```
+
+Continue each subtask until the reviewer returns `APPROVE`. After all subtasks are approved, run an integration review over the combined diff. To avoid blind spinning, after 3 failed feedback rounds on the same subtask issue, stop the loop and have the main agent take over or ask the user for a sharper requirement.
+
+Each rework prompt must include:
+
+- The original request and acceptance criteria.
+- The subtask id and subtask acceptance criteria.
+- The current diff or changed-file list.
+- The premium reviewer's exact requested changes.
+- The tester's failing evidence.
+- The tester's good/normal/bad case results.
+- What files may be touched in the rework.
+
+### 7. Integration Review
+
+After all subtasks are individually approved, the premium reviewer must review the combined result:
+
+```text
+Original request: ...
+Subtasks approved: ...
+Combined diff summary: ...
+Cross-subtask risks: ...
+Tests run: ...
+Decision requested: APPROVE, CHANGES_REQUIRED, or REJECT for the full task.
+```
+
+If integration review returns `CHANGES_REQUIRED`, assign the fix to a targeted `qwen-dev` subtask and rerun the matching tester. If it returns `REJECT`, stop and redesign.
+
+### 8. Main Agent Verification
+
+Run the relevant tests, linters, build, or manual checks yourself. Review `git diff` before final response. Remove temporary artifacts unless they are intentional deliverables.
+
+## Output Rules
+
+In the final response, include:
+
+- How the premium model decomposed the task.
+- What `qwen-dev` implemented.
+- What `qwen-tester` checked and found, including good/normal/bad case results.
+- Whether a premium reviewer actually ran, which reviewer it was, and its decision.
+- How many feedback rounds were needed.
+- Verification commands and results.
+- Remaining risks or follow-ups.
+
+Never say "approved by Claude/Codex/Gemini" unless that model/tool actually reviewed the packet. Never hide worker failures; summarize the failure and how it was handled.

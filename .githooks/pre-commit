@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Keeps the generated manifests (plugin.json, AGENTS.md, antigravity.json) in
+# sync with the skills on disk on every commit, so they never drift.
+#
+# Installed via:  git config core.hooksPath .githooks
+set -euo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+
+# Only act when something that feeds the manifests is staged.
+staged="$(git diff --cached --name-only --diff-filter=ACMRD)"
+if ! grep -qE '^(skills/.*/SKILL\.md|scripts/gen-.*\.sh|scripts/sync-manifests\.sh)$' <<<"$staged"; then
+  exit 0
+fi
+
+echo "pre-commit: skill change detected — regenerating manifests…"
+"$REPO/scripts/sync-manifests.sh"
+
+# Stage the regenerated outputs so they ride along in this commit.
+git add \
+  "$REPO/.claude-plugin/plugin.json" \
+  "$REPO/AGENTS.md" \
+  "$REPO/antigravity.json"

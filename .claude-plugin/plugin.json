@@ -1,0 +1,12 @@
+{
+  "name": "subagent-skills",
+  "skills": [
+    "./skills/engineering/debug-mantra",
+    "./skills/engineering/post-mortem",
+    "./skills/engineering/qwen-agent",
+    "./skills/engineering/qwen-team",
+    "./skills/engineering/scrutinize",
+    "./skills/productivity/management-talk",
+    "./skills/productivity/qwenchance"
+  ]
+}
