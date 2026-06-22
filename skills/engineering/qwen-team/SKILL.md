@@ -80,11 +80,7 @@ For both prompts, define:
 
 ### 3. Run Qwen Dev Per Subtask
 
-Launch one dev per active subtask with the `qwen-agent` command pattern:
-
-```bash
-claude-subagent -p "<self-contained qwen-dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
-```
+Delegate each dev subtask using the **qwen-agent** skill. Follow qwen-agent's invocation rules for context window sizing, allowedTools, and background/parallel pattern. Run all independent subtasks in parallel.
 
 Dev prompt shape:
 
@@ -107,11 +103,7 @@ Inspect each dev's diff before testing. If a dev edited outside scope, touched f
 
 ### 4. Run Qwen Tester Per Subtask
 
-Launch the tester after the matching dev pass. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
-
-```bash
-claude-subagent -p "<self-contained qwen-tester prompt>" --allowedTools Bash Read Edit Write Glob Grep
-```
+Delegate each tester subtask using the **qwen-agent** skill, after the matching dev pass completes. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
 
 Tester prompt shape:
 
@@ -139,7 +131,7 @@ Prefer a tester that runs tests and reports defects without editing implementati
 
 ### 5. Premium Review and Orchestration
 
-Build a reviewer packet after every dev/test pass:
+Once all parallel subtasks have a dev+test result, build a single reviewer packet covering all subtasks in this round:
 
 ```text
 Original request: ...
@@ -147,33 +139,43 @@ Repository: /absolute/path
 Overall goal: ...
 Overall acceptance criteria: ...
 Subtask plan: ...
-Subtask under review: ...
-Qwen dev output for this subtask: ...
-Qwen tester output for this subtask: ...
-Tester case coverage: good case / normal case / bad case
-Diff summary: ...
-Verification run: ...
+Results per subtask:
+  subtask-1: dev output / tester output / case coverage / diff summary
+  subtask-2: dev output / tester output / case coverage / diff summary
+  ...
 Known risks or unverified areas: ...
-Decision requested: APPROVE, CHANGES_REQUIRED, or REJECT with reasons.
+Decision requested per subtask: APPROVE, CHANGES_REQUIRED, or REJECT with reasons.
 ```
 
 Send the packet to the requested premium reviewer if available. Check availability before invoking a CLI such as `claude`, `codex`, or `gemini`; do not invent a review. If no external reviewer is available, the main agent performs this review directly and labels it as internal review.
 
-Reviewer decision rules:
+Reviewer decision rules per subtask:
 
-- `APPROVE`: mark the subtask approved and move to the next subtask or integration review.
-- `CHANGES_REQUIRED`: turn the reviewer feedback into a new self-contained `qwen-dev` prompt for that subtask, then rerun its `qwen-tester` and review again. Missing good/normal/bad case coverage is always changes-required unless the tester gave a concrete non-applicability reason.
-- `REJECT`: stop that subtask's Qwen loop, explain the rejection, and have the premium model redesign the subtask or ask the user for direction.
+- `APPROVE`: mark the subtask done. Exclude it from the next round.
+- `CHANGES_REQUIRED`: queue the subtask for rework in the next round.
+- `REJECT`: stop that subtask, explain the rejection, and redesign or ask the user for direction.
 
 ### 6. Feedback Loop
 
-Loop in this order:
-
 ```text
-premium decomposition -> qwen-dev(subtask) -> qwen-tester(subtask) -> premium review -> qwen-dev rework(subtask) -> qwen-tester(subtask) -> premium review
+decompose
+    │
+    └── [all subtasks] dev → test ── parallel
+                │
+        premium review (all results at once)
+                │
+        route back ONLY failed subtasks
+                │
+        [failed subtasks] dev rework → test ── parallel
+                │
+        premium review (failed subtasks only)
+                │
+        repeat until all APPROVE
+                │
+        integration review
 ```
 
-Continue each subtask until the reviewer returns `APPROVE`. After all subtasks are approved, run an integration review over the combined diff. To avoid blind spinning, after 3 failed feedback rounds on the same subtask issue, stop the loop and have the main agent take over or ask the user for a sharper requirement.
+Each round, only subtasks that received `CHANGES_REQUIRED` re-enter the dev → test cycle. Approved subtasks are frozen. To avoid blind spinning, after 3 failed rounds on the same subtask, stop and have the main agent take over or ask the user for a sharper requirement.
 
 Each rework prompt must include:
 
