@@ -466,10 +466,27 @@ Decision requested per subtask: APPROVE, CHANGES_REQUIRED, or REJECT with reason
 
 Send the packet to the requested premium reviewer if available. Check availability before invoking a CLI such as `claude`, `codex`, or `gemini`; do not invent a review. If no external reviewer is available, the main agent performs this review directly and labels it as internal review.
 
+The reviewer evaluates **both** dev and tester output for every subtask.
+
+Dev review — check the implementation:
+
+- Diff stays within allowed scope.
+- Output matches the acceptance criteria.
+- No unsafe or out-of-scope changes.
+
+Tester review — scrutinize harder:
+
+- All 3 case groups covered (good / normal / bad) — not just claimed, actually tested.
+- Tests are independent: the tester verified behavior, not just repeated what the dev did.
+- Reported defects are reproducible with concrete evidence, not guesses.
+- Missing coverage is flagged explicitly.
+
+If the tester's work is weak (shallow tests, missing case groups, no real verification), treat it as `CHANGES_REQUIRED` on the tester — rerun the tester with stricter instructions before judging the dev's output.
+
 Reviewer decision rules per subtask:
 
-- `APPROVE`: mark the subtask done. Exclude it from the next round.
-- `CHANGES_REQUIRED`: queue the subtask for rework in the next round.
+- `APPROVE`: both dev and tester passed review. Mark the subtask done. Exclude it from the next round.
+- `CHANGES_REQUIRED`: queue the subtask for rework — specify whether the issue is with the dev, the tester, or both.
 - `REJECT`: stop that subtask, explain the rejection, and redesign or ask the user for direction.
 
 ### 6. Feedback Loop
