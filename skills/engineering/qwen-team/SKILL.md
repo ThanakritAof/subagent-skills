@@ -82,6 +82,8 @@ For both prompts, define:
 
 Delegate each dev subtask using the **qwen-agent** skill. Follow qwen-agent's invocation rules for context window sizing, allowedTools, and background/parallel pattern. Run all independent subtasks in parallel.
 
+If a subtask returns an API error, empty result, or timeout, retry it up to 2 times before marking it FAILED. Report FAILED subtasks to the premium reviewer — do not silently skip them. The reviewer decides whether to skip, redesign, or escalate.
+
 Dev prompt shape:
 
 ```text
@@ -104,6 +106,8 @@ Inspect each dev's diff before testing. If a dev edited outside scope, touched f
 ### 4. Run Qwen Tester Per Subtask
 
 Delegate each tester subtask using the **qwen-agent** skill, after the matching dev pass completes. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
+
+Apply the same retry rule as step 3: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
 
 Tester prompt shape:
 
