@@ -27,9 +27,12 @@ npx skills add ThanakritAof/subagent-skills -a claude-code
 
 # Other agents (codex, gemini-cli, cursor, etc.)
 npx skills add ThanakritAof/subagent-skills -a <agent-name>
+
+# All agents at once
+npx skills add ThanakritAof/subagent-skills
 ```
 
-The `-a` flag targets a specific agent. Run `npx skills add --list-agents` to see all valid agent names.
+The `-a` flag targets a specific agent — skills install into that agent's config directory. Without `-a`, skills land in `~/.agents/skills/` which not all agents read from (Claude Code reads from `~/.claude/skills/` instead). Run `npx skills add --list-agents` to see all valid agent names.
 
 ### Alternative - Bash script
 
