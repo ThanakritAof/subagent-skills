@@ -393,7 +393,21 @@ For both prompts, define:
 
 ### 3. Run Qwen Dev Per Subtask
 
-Delegate each dev subtask using the **qwen-agent** skill. Follow qwen-agent's invocation rules for context window sizing, allowedTools, and background/parallel pattern. Run with `--effort ultracode` for best implementation quality. Run all independent subtasks in parallel.
+**You MUST invoke `claude-subagent` for every dev subtask. Do not implement the subtask yourself.**
+
+Run each dev subtask via the **qwen-agent** skill using this exact command pattern:
+
+```bash
+claude-subagent --effort ultracode -p "<self-contained dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
+```
+
+For background / parallel (independent subtasks run at the same time):
+
+```bash
+claude-subagent --effort ultracode -p "<dev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-subtask-<id>.log 2>&1
+```
+
+Launch all independent subtasks as parallel background runs. Follow qwen-agent's rules for context window sizing (128k limit — scope the prompt to bounded files/dirs only).
 
 If a subtask returns an API error, empty result, or timeout, retry it up to 2 times before marking it FAILED. Report FAILED subtasks to the premium reviewer — do not silently skip them. The reviewer decides whether to skip, redesign, or escalate.
 
