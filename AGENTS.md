@@ -393,7 +393,7 @@ For both prompts, define:
 
 ### 3. Run Qwen Dev Per Subtask
 
-Delegate each dev subtask using the **qwen-agent** skill. Follow qwen-agent's invocation rules for context window sizing, allowedTools, and background/parallel pattern. Run all independent subtasks in parallel.
+Delegate each dev subtask using the **qwen-agent** skill. Follow qwen-agent's invocation rules for context window sizing, allowedTools, and background/parallel pattern. Run with `--effort ultracode` for best implementation quality. Run all independent subtasks in parallel.
 
 If a subtask returns an API error, empty result, or timeout, retry it up to 2 times before marking it FAILED. Report FAILED subtasks to the premium reviewer — do not silently skip them. The reviewer decides whether to skip, redesign, or escalate.
 
