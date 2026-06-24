@@ -25,7 +25,7 @@ Each skill is its own directory containing a `SKILL.md` (with YAML frontmatter â
 npx skills add ThanakritAof/subagent-skills -a claude-code
 ```
 
-The `-a "Claude Code"` flag installs directly into `~/.claude/skills/`. Without it, skills land in `~/.agents/skills/` and Claude Code won't find them.
+The `-a claude-code` flag installs directly into `~/.claude/skills/`. Without it, skills land in `~/.agents/skills/` and Claude Code won't find them.
 
 ### Alternative - Bash script
 
