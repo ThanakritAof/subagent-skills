@@ -22,7 +22,7 @@ Each skill is its own directory containing a `SKILL.md` (with YAML frontmatter â
 ### With `npx skills` (Recommended - works for every agent)
 
 ```bash
-npx skills add ThanakritAof/subagent-skills -a "Claude Code"
+npx skills add ThanakritAof/subagent-skills -a claude-code
 ```
 
 The `-a "Claude Code"` flag installs directly into `~/.claude/skills/`. Without it, skills land in `~/.agents/skills/` and Claude Code won't find them.
