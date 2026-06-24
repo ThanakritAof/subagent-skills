@@ -418,7 +418,7 @@ Inspect each dev's diff before testing. If a dev edited outside scope, touched f
 
 ### 4. Run Qwen Tester Per Subtask
 
-Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
+Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Run with `--effort ultracode` to maximise test thoroughness. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
 
 Apply the same retry rule as step 3: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
 
