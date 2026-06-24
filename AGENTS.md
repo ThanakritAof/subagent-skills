@@ -244,10 +244,10 @@ Offload **menial, self-contained** tasks to a Qwen model running inside a headle
 `claude-subagent` is a shell alias → `claude --model qwen3.6-35b-a3b` routed through the subagent gateway. Run it headless with `-p`:
 
 ```bash
-claude-subagent --effort ultracode -p "<self-contained task prompt>" --allowedTools Bash Read Edit Write Glob Grep
+claude-subagent --effort max -p "<self-contained task prompt>" --allowedTools Bash Read Edit Write Glob Grep
 ```
 
-- **This is the default invocation.** `--effort ultracode` is always passed to maximise the subagent's reasoning budget on delegated tasks. The flag list scopes which tools the subagent may use without a prompt, so it can finish a menial job unattended. Without it the subagent stalls waiting for approval on the first edit or command.
+- **This is the default invocation.** `--effort max` is always passed to maximise the subagent's reasoning budget on delegated tasks. The flag list scopes which tools the subagent may use without a prompt, so it can finish a menial job unattended. Without it the subagent stalls waiting for approval on the first edit or command.
 - The alias bakes in `--allowedTools '*'`, which Claude Code **silently ignores** with a warning (`Wildcard tool name "*" is not supported`). That warning is expected and harmless — the `--allowedTools` you append is what takes effect.
 - For edit-only, lower-risk tasks you may instead use `--permission-mode acceptEdits` (auto-accepts file edits, but Bash still prompts — don't use it for verification/build/test runs).
 
@@ -288,7 +288,7 @@ The Bash tool's `cd` resets between calls and `cd &&` can trip permission prompt
 - **Background / parallel (run several at once):** redirect to a log and run with the Bash tool's `run_in_background: true`, then read the log when it finishes:
 
   ```bash
-  claude-subagent --effort ultracode -p "<task>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-<label>.log 2>&1
+  claude-subagent --effort max -p "<task>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-<label>.log 2>&1
   ```
 
   Launch independent tasks as separate background runs; collect each log on completion. Use this when delegating 2+ unrelated menial jobs.
@@ -298,7 +298,7 @@ The Bash tool's `cd` resets between calls and `cd &&` can trip permission prompt
 1. Confirm the task is menial and low-risk (see description). If it needs design judgment or this chat's context, **do it yourself** — don't delegate.
 2. Check it fits qwen's **128k context window** — estimate the file footprint and split large jobs into bounded per-file/per-dir chunks (see "Mind the context window").
 3. Write a fully self-contained prompt with absolute paths and acceptance criteria.
-4. Run `claude-subagent --effort ultracode -p "..." --allowedTools Bash Read Edit Write Glob Grep` (foreground), or background-redirect for parallel jobs.
+4. Run `claude-subagent --effort max -p "..." --allowedTools Bash Read Edit Write Glob Grep` (foreground), or background-redirect for parallel jobs.
 5. **Verify the output yourself** — qwen is cheaper and less reliable. Check the file/result actually meets the acceptance criteria before reporting success.
 
 ## One-time setup (optional, removes repeated prompts)
@@ -398,13 +398,13 @@ For both prompts, define:
 Run each dev subtask via the **qwen-agent** skill using this exact command pattern:
 
 ```bash
-claude-subagent --effort ultracode -p "<self-contained dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
+claude-subagent --effort max -p "<self-contained dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
 ```
 
 For background / parallel (independent subtasks run at the same time):
 
 ```bash
-claude-subagent --effort ultracode -p "<dev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-subtask-<id>.log 2>&1
+claude-subagent --effort max -p "<dev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-subtask-<id>.log 2>&1
 ```
 
 Launch all independent subtasks as parallel background runs. Follow qwen-agent's rules for context window sizing (128k limit — scope the prompt to bounded files/dirs only).
@@ -432,7 +432,7 @@ Inspect each dev's diff before testing. If a dev edited outside scope, touched f
 
 ### 4. Run Qwen Tester Per Subtask
 
-Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Run with `--effort ultracode` to maximise test thoroughness. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
+Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Run with `--effort max` to maximise test thoroughness. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
 
 Apply the same retry rule as step 3: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
 

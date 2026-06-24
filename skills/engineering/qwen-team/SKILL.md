@@ -85,13 +85,13 @@ For both prompts, define:
 Run each dev subtask via the **qwen-agent** skill using this exact command pattern:
 
 ```bash
-claude-subagent --effort ultracode -p "<self-contained dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
+claude-subagent --effort max -p "<self-contained dev prompt>" --allowedTools Bash Read Edit Write Glob Grep
 ```
 
 For background / parallel (independent subtasks run at the same time):
 
 ```bash
-claude-subagent --effort ultracode -p "<dev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-subtask-<id>.log 2>&1
+claude-subagent --effort max -p "<dev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /tmp/qwen-subtask-<id>.log 2>&1
 ```
 
 Launch all independent subtasks as parallel background runs. Follow qwen-agent's rules for context window sizing (128k limit — scope the prompt to bounded files/dirs only).
@@ -119,7 +119,7 @@ Inspect each dev's diff before testing. If a dev edited outside scope, touched f
 
 ### 4. Run Qwen Tester Per Subtask
 
-Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Run with `--effort ultracode` to maximise test thoroughness. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
+Delegate each tester subtask to a **premium model** (Claude, Codex, or Gemini — not Qwen), after the matching dev pass completes. The tester needs judgment to catch issues that a cheap model would miss. Run with `--effort max` to maximise test thoroughness. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
 
 Apply the same retry rule as step 3: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
 
