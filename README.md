@@ -44,8 +44,8 @@ List every `SKILL.md` in the repo:
 - **[debug-mantra](./skills/engineering/debug-mantra/SKILL.md)** — Four-mantra debugging discipline: reproduce → trace the fail path → falsify the hypothesis → cross-reference every breadcrumb. Recites verbatim at session start, then applies in order before any fix.
 - **[post-mortem](./skills/engineering/post-mortem/SKILL.md)** — Write the canonical engineering record of a fixed bug — root cause, mechanism, fix, validation, how it slipped through. Engineer-audience; refuses to draft without a reliable repro, known cause, and validated fix.
 - **[scrutinize](./skills/engineering/scrutinize/SKILL.md)** — Outsider-perspective end-to-end review of a plan, PR, or code change. Questions intent (is there a simpler way?), traces the actual code path, and verifies the change does what it claims. Output is concise, actionable, with rationale.
-- **[qwen-agent](./skills/engineering/qwen-agent/SKILL.md)** — Delegate menial, well-scoped coding tasks to a cheap Qwen-backed subagent via the `claude-subagent` command. Use for bulk renames, formatting, boilerplate, grep-style summarization, scaffolding, and build/test reporting.
-- **[qwen-team](./skills/engineering/qwen-team/SKILL.md)** — Have a premium model split large tasks into subtasks, assign each to Qwen dev/tester pairs, and orchestrate review plus feedback loops.
+- **[qwen-agent](./skills/engineering/qwen-agent/SKILL.md)** — Delegate menial, well-scoped coding tasks to a cheap Qwen-backed subagent via `claude-subagent --effort ultracode`. Use for bulk renames, formatting, boilerplate, grep-style summarization, scaffolding, and build/test reporting.
+- **[qwen-team](./skills/engineering/qwen-team/SKILL.md)** — Premium model decomposes a large task into 2-5 subtasks; each subtask runs a mandatory `claude-subagent` dev pass and a premium-model tester pass (both `--effort ultracode`) in parallel, then loops through premium review until all subtasks are approved.
 
 ### Productivity
 
