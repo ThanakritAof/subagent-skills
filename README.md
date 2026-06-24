@@ -2,6 +2,8 @@
 
 Agent skills loaded by Claude Code.
 
+Forked and extended from [thananon/9arm-skills](https://github.com/thananon/9arm-skills).
+
 ## Layout
 
 Skills live under `skills/`, grouped into buckets:
