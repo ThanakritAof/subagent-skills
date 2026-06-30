@@ -19,6 +19,18 @@
       "description": "Four-mantra debugging discipline — reproduce, trace the fail path, falsify the hypothesis, cross-reference every breadcrumb. Recite the mantra block verbatim at the start of any debugging session, then apply the four steps in order before proposing any fix. Trigger on /debug-mantra and proactively whenever debugging starts — user reports a bug, says something is broken/throwing/failing, asks to debug/diagnose/investigate an issue, or pastes a stack trace or error log."
     },
     {
+      "name": "gemini-agent",
+      "path": "./skills/engineering/gemini-agent",
+      "category": "engineering",
+      "description": "Delegate menial, well-scoped coding tasks to a cheap Gemini Flash subagent via the `agy` command instead of burning Claude tokens/quota. Use when the work is mechanical and low-risk — bulk renames, formatting, boilerplate, find-replace, grep-style search & summarization, reading/condensing logs or files, test/docstring/comment scaffolding, or running builds/linters/tests and reporting pass-fail. Also use when the user says \"use gemini\", \"use agy\", \"delegate this to gemini\", or \"do this cheaply with gemini\". Do NOT use for architecture, design, debugging judgment, security-sensitive edits, or anything needing this conversation's context."
+    },
+    {
+      "name": "gemini-team",
+      "path": "./skills/engineering/gemini-team",
+      "category": "engineering",
+      "description": "Have a premium model decompose a large task into subtasks, assign each subtask to a paired Gemini Flash dev and premium tester via `agy`, then orchestrate review, integration, and feedback loops until the full task meets acceptance criteria. Use when the user asks for \"gemini team\", \"agy team\", \"gemini dev and tester\", \"split this across gemini\", or when a broad task needs cheap parallel implementation/testing with premium-model orchestration. Do not use for small single-worker delegation; use gemini-agent instead."
+    },
+    {
       "name": "post-mortem",
       "path": "./skills/engineering/post-mortem",
       "category": "engineering",

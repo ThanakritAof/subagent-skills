@@ -2,6 +2,8 @@
   "name": "subagent-skills",
   "skills": [
     "./skills/engineering/debug-mantra",
+    "./skills/engineering/gemini-agent",
+    "./skills/engineering/gemini-team",
     "./skills/engineering/post-mortem",
     "./skills/engineering/qwen-agent",
     "./skills/engineering/qwen-team",

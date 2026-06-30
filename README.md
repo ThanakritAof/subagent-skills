@@ -57,6 +57,8 @@ List every `SKILL.md` in the repo:
 - **[scrutinize](./skills/engineering/scrutinize/SKILL.md)** — Outsider-perspective end-to-end review of a plan, PR, or code change. Questions intent (is there a simpler way?), traces the actual code path, and verifies the change does what it claims. Output is concise, actionable, with rationale.
 - **[qwen-agent](./skills/engineering/qwen-agent/SKILL.md)** — Delegate menial, well-scoped coding tasks to a cheap Qwen-backed subagent via `claude-subagent --effort ultracode`. Use for bulk renames, formatting, boilerplate, grep-style summarization, scaffolding, and build/test reporting.
 - **[qwen-team](./skills/engineering/qwen-team/SKILL.md)** — Premium model decomposes a large task into 2-5 subtasks; each subtask runs a mandatory `claude-subagent` dev pass and a premium-model tester pass (both `--effort ultracode`) in parallel, then loops through premium review until all subtasks are approved.
+- **[gemini-agent](./skills/engineering/gemini-agent/SKILL.md)** — Delegate menial, well-scoped coding tasks to a cheap Gemini Flash subagent via `agy`. Use for bulk renames, formatting, boilerplate, grep-style summarization, scaffolding, and build/test reporting.
+- **[gemini-team](./skills/engineering/gemini-team/SKILL.md)** — Premium model decomposes a large task into 2-5 subtasks; each subtask runs an `agy` Gemini Flash dev pass and a premium-model tester pass in parallel, then loops through premium review until all subtasks are approved.
 
 ### Productivity
 
