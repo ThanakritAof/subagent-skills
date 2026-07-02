@@ -9,6 +9,10 @@ description: Have a premium model decompose a large task into subtasks, assign e
 
 Use Gemini Flash as cheap dev capacity, not as the final authority. The premium model decomposes the large task into subtasks, gives each subtask an `gemini-dev` (Gemini Flash) and `gemini-tester` (premium model), then reviews, integrates, and controls the feedback loop.
 
+## Prerequisites
+
+Confirm `agy` is installed and authenticated before decomposing anything: `which agy` and `agy models`. If either fails, stop and fix setup — don't discover it mid-rollout after subtasks are already launched.
+
 ## Use Criteria
 
 Use this workflow only when all of these are true:
@@ -26,6 +30,12 @@ Do not use this workflow for:
 - Debugging before a reliable repro exists and the fail path is known.
 - Tasks where workers need hidden conversation context to succeed.
 - Tasks where no meaningful independent tester role exists.
+
+As a concrete threshold: if the whole task touches roughly 3 files or fewer, or one worker could finish it solo in under ~15 minutes, do it directly. The dev + tester + reviewer orchestration overhead usually costs more than it saves at that scale — reserve this workflow for work that genuinely needs 2-5 independently-testable subtasks.
+
+## Before Running Unattended
+
+Parallel/background `agy` runs with `--dangerously-skip-permissions` (steps 4-5 below) form an unsandboxed autonomous loop with no per-action approval gate. Claude Code's auto-mode permission classifier can — and in testing did — block this outright ("unsandboxed autonomous loop, no per-action approval gate"), even with `Bash(agy:*)` allow-listed. Before launching parallel/background dev or tester runs, tell the user what's about to run and get explicit confirmation that unattended execution is OK, rather than firing the commands and finding out from the block.
 
 ## Roles
 
@@ -45,7 +55,7 @@ agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<self
 
 ### AG Tester (Premium)
 
-Use one `gemini-tester` per active subtask — always a **premium model**, not Gemini Flash. The tester needs judgment to catch issues the cheap dev would miss. Use `Gemini 3.5 Flash (High)`, `Claude Sonnet 4.6 (Thinking)`, or let the main agent perform the test review directly.
+Use one `gemini-tester` per active subtask — always a **premium model**, not Gemini Flash. The tester needs judgment to catch issues the cheap dev would miss. Use `Claude Sonnet 4.6 (Thinking)`, `Claude Opus 4.6 (Thinking)`, or let the main agent perform the test review directly.
 
 Command pattern (via agy):
 
@@ -61,7 +71,15 @@ Use the main orchestrating agent or `agy --model "Claude Opus 4.6 (Thinking)"` a
 
 ## Workflow
 
-### 1. Decompose the Task
+### 1. Verify a Safety Net Exists
+
+Before launching any `gemini-dev`, confirm the repository has a rollback path:
+
+- Check whether the target is a git repo (e.g. `git -C <repo> rev-parse --is-inside-work-tree`).
+- If it is a git repo, note whether the working tree is already dirty so the final `git diff` review (step 9) is meaningful.
+- If it is **not** a git repo, back up every file or directory listed in each subtask's "Allowed files or directories" (e.g. copy to a scratch location) before that subtask's dev pass starts. Do not let `gemini-dev` touch ungoverned files with no way to diff or roll back.
+
+### 2. Decompose the Task
 
 State the overall goal in one sentence. The premium model then splits the work into 2-5 subtasks. Each subtask must have a clear boundary, owner label, acceptance criteria, and integration notes.
 
@@ -80,7 +98,7 @@ Integration notes: ...
 
 Prefer parallel subtasks when file ownership does not overlap. If subtasks touch the same files or depend on each other, serialize them.
 
-### 2. Create Dev and Tester Prompts
+### 3. Create Dev and Tester Prompts
 
 For both prompts, define:
 
@@ -90,7 +108,7 @@ For both prompts, define:
 - Acceptance criteria: what must be true for the subtask to count.
 - Boundaries: files, directories, commands, or systems the worker must not touch.
 
-### 3. Run AG Dev Per Subtask
+### 4. Run AG Dev Per Subtask
 
 **You MUST invoke `agy` for every dev subtask. Do not implement the subtask yourself.**
 
@@ -100,10 +118,10 @@ Run each dev subtask via the **gemini-agent** skill using this exact command pat
 agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<self-contained dev prompt>"
 ```
 
-For background / parallel (independent subtasks run at the same time):
+For background / parallel (independent subtasks run at the same time), redirect to a log in your scratch/temp directory — not a hardcoded `/tmp` path (Claude Code provides a session scratchpad directory for this):
 
 ```bash
-agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<dev prompt>" > /tmp/ag-subtask-<id>.log 2>&1
+agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<dev prompt>" > <scratch-dir>/ag-subtask-<id>.log 2>&1
 ```
 
 Launch all independent subtasks as parallel background runs. Follow gemini-agent's rules for scoping the prompt to bounded files/dirs.
@@ -129,11 +147,11 @@ Do not rely on prior conversation context.
 
 Inspect each dev's diff before testing. If a dev edited outside scope, touched files owned by another active subtask, or made unsafe changes, reject that pass and either rerun with narrower instructions or take over directly.
 
-### 4. Run AG Tester Per Subtask
+### 5. Run AG Tester Per Subtask
 
 Delegate each tester subtask to a **premium model** after the matching dev pass completes. Run via `agy --model "Claude Sonnet 4.6 (Thinking)"` or have the main agent review directly. Give the tester the original request, subtask acceptance criteria, relevant files, changed-file list, and any commands the dev ran.
 
-Apply the same retry rule as step 3: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
+Apply the same retry rule as step 4: up to 2 retries on API error / empty result / timeout, then mark FAILED and report to the reviewer.
 
 Tester prompt shape:
 
@@ -157,7 +175,7 @@ Return: commands run, pass/fail results for all three case groups, defects found
 Do not rely on prior conversation context.
 ```
 
-### 5. Premium Review and Orchestration
+### 6. Premium Review and Orchestration
 
 Once all parallel subtasks have a dev+test result, build a single reviewer packet:
 
@@ -190,7 +208,7 @@ Reviewer decision rules per subtask:
 - `CHANGES_REQUIRED`: queue the subtask for rework — specify whether dev, tester, or both need changes.
 - `REJECT`: stop that subtask, explain, redesign or ask the user.
 
-### 6. Feedback Loop
+### 7. Feedback Loop
 
 ```text
 decompose
@@ -221,7 +239,7 @@ Each rework prompt must include:
 - The tester's failing evidence and good/normal/bad case results.
 - What files may be touched in the rework.
 
-### 7. Integration Review
+### 8. Integration Review
 
 After all subtasks are individually approved, the premium reviewer must review the combined result:
 
@@ -236,9 +254,9 @@ Decision requested: APPROVE, CHANGES_REQUIRED, or REJECT for the full task.
 
 If integration review returns `CHANGES_REQUIRED`, assign the fix to a targeted `gemini-dev` subtask and rerun the matching tester. If it returns `REJECT`, stop and redesign.
 
-### 8. Main Agent Verification
+### 9. Main Agent Verification
 
-Run the relevant tests, linters, build, or manual checks yourself. Review `git diff` before final response. Remove temporary artifacts unless they are intentional deliverables.
+Run the relevant tests, linters, build, or manual checks yourself. If step 1 found a git repo, review `git diff` before final response; if not, diff against the backup taken in step 1. Remove temporary artifacts unless they are intentional deliverables.
 
 ## Output Rules
 

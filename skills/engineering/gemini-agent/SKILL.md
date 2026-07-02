@@ -18,6 +18,7 @@ agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<self
 - **This is the default invocation.** `Gemini 3.5 Flash (Medium)` is the cheap workhorse model — fast and low-cost for menial work.
 - `--dangerously-skip-permissions` auto-approves all tool permission requests so the subagent can finish unattended. Without it the subagent stalls waiting for approval on the first edit or command.
 - For higher reasoning on a delegated task, step up to `Gemini 3.5 Flash (High)`.
+- `agy` also has a `--sandbox` flag ("run in a sandbox with terminal restrictions enabled"). Pair it with `--dangerously-skip-permissions` on unattended runs to cut the blast radius of an auto-approved subagent, or use `--sandbox` alone when full auto-approval isn't needed. Check `agy --help` for current flag behavior before relying on it.
 
 ## Writing the task prompt (most important step)
 
@@ -48,28 +49,33 @@ Don't rely on cwd — it may not match your project root:
 ## Return contract
 
 - **Default (text):** agy's final message prints to stdout — read it directly.
-- **Background / parallel (run several at once):** redirect to a log and run with the Bash tool's `run_in_background: true`, then read the log when it finishes:
+- **Background / parallel (run several at once):** redirect to a log in your scratch/temp directory — not a hardcoded `/tmp` path (Claude Code provides a session scratchpad directory for this) — and run with the Bash tool's `run_in_background: true`, then read the log when it finishes:
 
   ```bash
-  agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<task>" > /tmp/ag-<label>.log 2>&1
+  agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "<task>" > <scratch-dir>/ag-<label>.log 2>&1
   ```
 
   Launch independent tasks as separate background runs; collect each log on completion. Use this when delegating 2+ unrelated menial jobs.
 
 ## Workflow checklist
 
-1. Confirm the task is menial and low-risk (see description). If it needs design judgment or this chat's context, **do it yourself** — don't delegate.
-2. Write a fully self-contained prompt with absolute paths and acceptance criteria.
-3. Run `agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "..."` (foreground), or background-redirect for parallel jobs.
-4. **Verify the output yourself** — Gemini Flash is cheaper and less reliable for nuanced work. Check the file/result actually meets the acceptance criteria before reporting success.
+1. Verify `agy` is installed and authenticated: `which agy` and `agy models`. If either fails, fix setup before delegating — don't find out mid-task.
+2. Confirm the task is menial and low-risk (see description). If it needs design judgment or this chat's context, **do it yourself** — don't delegate.
+3. Write a fully self-contained prompt with absolute paths and acceptance criteria.
+4. Run `agy --model "Gemini 3.5 Flash (Medium)" --dangerously-skip-permissions -p "..."` (foreground), or background-redirect for parallel jobs.
+5. **Verify the output yourself** — Gemini Flash is cheaper and less reliable for nuanced work. Check the file/result actually meets the acceptance criteria before reporting success.
 
-## One-time setup (optional, removes repeated prompts)
+## Required setup — auto mode will block without this
 
-To stop per-call permission prompts when running `agy` from within Claude Code, add a Bash allow rule (via the `update-config` skill, or by editing settings):
+Claude Code's auto mode classifier treats `--dangerously-skip-permissions` as an unsafe flag and blocks the call unless it is explicitly whitelisted. **Add this rule before using gemini-agent in auto mode** (via the `update-config` skill, or by editing `.claude/settings.json`):
 
 ```json
 { "permissions": { "allow": ["Bash(agy:*)"] } }
 ```
+
+Without this rule, auto mode denies the call entirely. In interactive mode it will prompt for approval on each invocation instead.
+
+Even with the rule in place, running several `agy` calls in parallel and/or in the background (see Return contract above) is an unsandboxed autonomous loop with no per-action approval gate — the classifier can still block that specific pattern (observed in practice: "unsandboxed autonomous loop, no per-action approval gate"). Before launching parallel or background runs, tell the user what's about to run and get explicit confirmation rather than firing the commands and finding out from the block.
 
 ## When NOT to delegate
 
